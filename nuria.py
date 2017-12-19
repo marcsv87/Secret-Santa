@@ -1,12 +1,3 @@
-"""
-This simple example is used for the line-by-line tutorial
-that comes with pygame. It is based on a 'popular' web banner.
-Note there are comments here, but for the full explanation,
-follow along in the tutorial.
-"""
-
-
-#Import Modules
 import os, pygame
 from pygame.locals import *
 from pygame.compat import geterror
@@ -20,7 +11,6 @@ if not pygame.mixer: print ('Warning, sound disabled')
 main_dir = os.path.split(os.path.abspath(__file__))[0]
 data_dir = os.path.join(main_dir, 'data')
 
-#functions to create our resources
 def load_image(name, colorkey=None):
     fullname = os.path.join(data_dir, name)
     try:
@@ -50,7 +40,6 @@ def load_sound(name):
     return sound
 
 
-#classes for our game objects
 class Fist(pygame.sprite.Sprite):
     """moves a clenched fist on the screen, following the mouse"""
     def __init__(self):
@@ -143,10 +132,7 @@ class Character(pygame.sprite.Sprite):
 
 
 def main():
-    """this function is called when the program starts.
-       it initializes everything it needs, then runs in
-       a loop until the function returns."""
-    #Initialize Everything
+
     pygame.init()
     screen = pygame.display.set_mode((960, 640))
     pygame.display.set_caption('Monkey Fever')
@@ -222,11 +208,7 @@ def main():
                     enemies.append(new)
                     allsprites.add(enemies[-1])
                 count+=1
-#                    
-#                chimp2 = Character(img='erola.png', move = random.randint(2,10))
-#                allsprites.add(chimp2)
-#                enemies.append(chimp2)
-#                #enemies.reverse()
+
         
         if pygame.font:
             font = pygame.font.Font(None, 36)
