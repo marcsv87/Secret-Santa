@@ -12,6 +12,7 @@ from pygame.locals import *
 from pygame.compat import geterror
 import random, time
 from functools import reduce
+import pandas as pd
 
 if not pygame.font: print ('Warning, fonts disabled')
 if not pygame.mixer: print ('Warning, sound disabled')
@@ -24,7 +25,7 @@ def load_image(name, colorkey=None):
     fullname = os.path.join(data_dir, name)
     try:
         image = pygame.image.load(fullname)
-        image = pygame.transform.scale(image, (40,80))
+        image = pygame.transform.scale(image, (60,90))
     except pygame.error:
         print ('Cannot load image:', fullname)
         raise SystemExit(str(geterror()))
@@ -170,27 +171,62 @@ def main():
     screen.blit(background, (0, 0))
     screen.blit(text, textpos)
     pygame.display.flip()
-
+    
+    # we prepare dictionary of characters
+    characters = ['adria', 'alba', 'carla', 'clara', 'crespi', 'darthvader',
+                  'demagorgon', 'erola', 'frazier', 'joker', 'marc', 'nazgul',
+                  'paula']
+    status = ['friend', 'friend', 'friend', 'friend', 'friend', 'enemy',
+              'enemy', 'friend', 'enemy', 'enemy', 'friend', 'enemy',
+              'friend']
+    fname = ['adria.png', 'alba.png', 'carla.png', 'clara.png', 'crespi.png', 'darthvader.jpg',
+             'demagorgon.png', 'erola.png', 'frazier.jpg', 'joker.jpg', 
+             'marc.png', 'nazgul.jpg', 'paula.png']
+    is_there = [False]*len(characters)
+    order = [1,3,8,12,9,2,4,10,5,11,6,7,13]
+    dict_char = pd.DataFrame({'status':status, 'is_there':is_there, 'order':order, 'fname':fname}, 
+                             index=characters)
     #Prepare Game Objects
     clock = pygame.time.Clock()
     whiff_sound = load_sound('whiff.wav')
     punch_sound = load_sound('punch.wav')
-    chimp = Character(move = random.randint(2,10))
+    lose_sound = load_sound('evil.wav')
+    win_sound = load_sound('tada.wav')
+    nuria = Character(img='nuria.png', move=random.randint(3,8))
     fist = Fist()
-    allsprites = pygame.sprite.RenderPlain((fist, chimp))
-    enemies = [chimp]
+    allsprites = pygame.sprite.RenderPlain((fist, nuria))
+    lose_image = pygame.image.load('data/GameOver.jpg').convert()
+    winner_image = pygame.image.load('data/winner.jpg').convert()
+ 
+    enemies, friends = [], []
     init_time = time.time()
     #Main Loop
     going = True
-    there = False
+    #there = False
+    count = 1
     while going:
         clock.tick(60)
-        if time.time()-init_time>5 and not there:
-            there = True
-            chimp2 = Character(img='erola.png', move = random.randint(2,10))
-            allsprites.add(chimp2)
-            enemies.append(chimp2)
-            #enemies.reverse()
+        #if count < 13: count+=1
+        if time.time()-init_time>count*5:
+            #print('hola. Temps: {}'.format(time.time()))
+            if count<=13 and not dict_char[dict_char.order==count]['is_there'][0]:
+                dict_char.loc[dict_char.order==count,'is_there'] = True
+                if dict_char.loc[dict_char.order==count, 'status'][0] == 'friend':
+                    img_name = dict_char.loc[dict_char.order==count, 'fname'][0]
+                    new = Character(img=img_name, move = random.randint(3,10))
+                    friends.append(new)
+                    allsprites.add(friends[-1])
+                if dict_char.loc[dict_char.order==count, 'status'][0] == 'enemy':
+                    img_name = dict_char.loc[dict_char.order==count, 'fname'][0]
+                    new = Character(img=img_name, move = random.randint(8,15))
+                    enemies.append(new)
+                    allsprites.add(enemies[-1])
+                count+=1
+#                    
+#                chimp2 = Character(img='erola.png', move = random.randint(2,10))
+#                allsprites.add(chimp2)
+#                enemies.append(chimp2)
+#                #enemies.reverse()
         
         if pygame.font:
             font = pygame.font.Font(None, 36)
@@ -205,47 +241,64 @@ def main():
                 going = False
             elif event.type == MOUSEBUTTONDOWN:
                 punched = False
+                if fist.punch(nuria):
+                    punch_sound.play()
+                    nuria.punched()
+                    puntuacio = puntuacio - 20
+                    punched = True
+                for x in friends:
+                    fist.unpunch()
+                    if fist.punch(x):
+                        punch_sound.play()
+                        x.punched()
+                        puntuacio = puntuacio-10
+                        punched = True
                 for x in enemies:
+                    fist.unpunch()
                     if fist.punch(x):
                         punch_sound.play()
                         x.punched()
                         puntuacio = puntuacio+10
                         punched = True
-                    fist.unpunch()
                 if not punched:
                     whiff_sound.play() #miss
+                    #win_sound.play()
                     puntuacio -= 5                   
-#                if fist.punch(chimp):
-#                    #if punch:
-#                    punch_sound.play() #punch
-#                    chimp.punched()
-#                    puntuacio = puntuacio + 10
-#                else:
-#                    whiff_sound.play() #miss
-#                    puntuacio -= 5
+
             elif event.type == MOUSEBUTTONUP:
                 fist.unpunch()
 
         allsprites.update()
         if puntuacio <=-200:
             #print('game over')
+            screen.blit(background, (0,0))
+            screen.blit(lose_image, (0,0))
+            lose_sound.play()
             going = False
+            #lose_image = pygame.transform.scale(lose_image, (960, 640))
+            #lose_image_rect = lose_image.get_rect()
+            #lose_image_rect.left, lose_image_rect.top = (0,0)
+            time.sleep(5)
         elif puntuacio >= 200:
             #print('winner')
+            win_sound.play()
             going = False
-#        else:
-        #Draw Everything
-        screen.blit(background, (0, 0))
-        screen.blit(text, textpos)
-
-        allsprites.draw(screen)
-        pygame.display.flip()
+            #winner_image = pygame.transform.scale(winner_image, (960, 640))
+            #winner_image_rect = winner_image.get_rect()
+            #winner_image_rect.left, winner_image_rect.top = (0,0)
+            screen.blit(winner_image, (0,0))
+            time.sleep(5)
+        else:
+            #Draw Everything
+            screen.blit(background, (0, 0))
+            screen.blit(text, textpos)
+    
+            allsprites.draw(screen)
+            pygame.display.flip()
 
     pygame.quit()
 
 #Game Over
 
-
-#this calls the 'main' function when this script is executed
 if __name__ == '__main__':
     main()
